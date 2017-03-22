@@ -2,6 +2,7 @@
 from openprocurement.api.utils import update_logging_context
 from openprocurement.api.validation import validate_data
 from openprocurement.tender.belowthreshold.utils import  check_document
+from openprocurement.tender.core.validation import ViewPermissionValidationError
 
 
 def validate_bid_data(request):
@@ -78,3 +79,19 @@ def validate_bid_documents(request):
             document = check_document(request, document, doc_type, route_kwargs)
             documents[doc_type].append(document)
     return documents
+
+# tender documents
+def validate_add_tender_document_in_not_allowed_status(request):
+    if request.authenticated_role != 'auction' and request.validated['tender_status'] != 'active.enquiries' or \
+       request.authenticated_role == 'auction' and request.validated['tender_status'] not in ['active.auction', 'active.qualification']:
+        request.errors.add('body', 'data', 'Can\'t add document in current ({}) tender status'.format(request.validated['tender_status']))
+        request.errors.status = 403
+        raise ViewPermissionValidationError
+
+
+def validate_update_tender_document_in_not_allowed_status(request):
+    if request.authenticated_role != 'auction' and request.validated['tender_status'] != 'active.enquiries' or \
+       request.authenticated_role == 'auction' and request.validated['tender_status'] not in ['active.auction', 'active.qualification']:
+        request.errors.add('body', 'data', 'Can\'t update document in current ({}) tender status'.format(request.validated['tender_status']))
+        request.errors.status = 403
+        raise ViewPermissionValidationError
