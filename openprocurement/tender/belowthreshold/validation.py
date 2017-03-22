@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from openprocurement.api.utils import update_logging_context
-from openprocurement.api.validation import validate_data
+from openprocurement.api.validation import validate_data, ViewPermissionValidationError
 from openprocurement.tender.belowthreshold.utils import  check_document
-from openprocurement.tender.core.validation import ViewPermissionValidationError
 
 
 def validate_bid_data(request):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from openprocurement.api.utils import context_unpack, json_view, APIResource
+from openprocurement.api.validation import ViewPermissionValidationError
 
 from openprocurement.tender.core.utils import (
     save_tender, optendersresource, apply_patch
@@ -10,7 +11,6 @@ from openprocurement.tender.belowthreshold.utils import (
 )
 
 from openprocurement.tender.core.validation import (
-    ViewPermissionValidationError,
     validate_patch_tender_data,
     validate_tender_status_update_in_terminated_status
 )

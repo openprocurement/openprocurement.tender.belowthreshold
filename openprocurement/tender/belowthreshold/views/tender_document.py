@@ -9,6 +9,7 @@ from openprocurement.api.utils import (
 )
 
 from openprocurement.api.validation import (
+    ViewPermissionValidationError,
     validate_file_update,
     validate_file_upload,
     validate_patch_document_data,
@@ -19,7 +20,6 @@ from openprocurement.tender.core.utils import (
 )
 
 from openprocurement.tender.belowthreshold.validation import (
-    ViewPermissionValidationError,
     validate_add_tender_document_in_not_allowed_status,
     validate_update_tender_document_in_not_allowed_status
 )
