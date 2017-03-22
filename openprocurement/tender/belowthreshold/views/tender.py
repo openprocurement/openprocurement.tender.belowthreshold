@@ -10,7 +10,9 @@ from openprocurement.tender.belowthreshold.utils import (
 )
 
 from openprocurement.tender.core.validation import (
+    ViewPermissionValidationError,
     validate_patch_tender_data,
+    validate_tender_status_update_in_terminated_status
 )
 
 
@@ -163,16 +165,17 @@ class TenderResource(APIResource):
 
         """
         tender = self.context
-        if self.request.authenticated_role != 'Administrator' and tender.status in ['complete', 'unsuccessful', 'cancelled']:
-            self.request.errors.add('body', 'data', 'Can\'t update tender in current ({}) status'.format(tender.status))
-            self.request.errors.status = 403
+        try:
+            validate_tender_status_update_in_terminated_status(self.request, tender)
+        except ViewPermissionValidationError:
             return
-        if self.request.authenticated_role == 'chronograph':
-            apply_patch(self.request, save=False, src=self.request.validated['tender_src'])
-            check_status(self.request)
-            save_tender(self.request)
         else:
-            apply_patch(self.request, src=self.request.validated['tender_src'])
-        self.LOGGER.info('Updated tender {}'.format(tender.id),
-                    extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_patch'}))
-        return {'data': tender.serialize(tender.status)}
+            if self.request.authenticated_role == 'chronograph':
+                apply_patch(self.request, save=False, src=self.request.validated['tender_src'])
+                check_status(self.request)
+                save_tender(self.request)
+            else:
+                apply_patch(self.request, src=self.request.validated['tender_src'])
+            self.LOGGER.info('Updated tender {}'.format(tender.id),
+                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_patch'}))
+            return {'data': tender.serialize(tender.status)}
