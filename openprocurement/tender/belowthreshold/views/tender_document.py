@@ -43,23 +43,18 @@ class TenderDocumentResource(APIResource):
             ]).values(), key=lambda i: i['dateModified'])
         return {'data': collection_data}
 
-    @json_view(permission='upload_tender_documents', validators=(validate_file_upload,))
+    @json_view(permission='upload_tender_documents', validators=(validate_file_upload, validate_add_tender_document_in_not_allowed_status))
     def collection_post(self):
         """Tender Document Upload"""
-        try:
-            validate_add_tender_document_in_not_allowed_status(self.request)
-        except ViewPermissionValidationError:
-            return
-        else:
-            document = upload_file(self.request)
-            self.context.documents.append(document)
-            if save_tender(self.request):
-                self.LOGGER.info('Created tender document {}'.format(document.id),
-                            extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_create'}, {'document_id': document.id}))
-                self.request.response.status = 201
-                document_route = self.request.matched_route.name.replace("collection_", "")
-                self.request.response.headers['Location'] = self.request.current_route_url(_route_name=document_route, document_id=document.id, _query={})
-                return {'data': document.serialize("view")}
+        document = upload_file(self.request)
+        self.context.documents.append(document)
+        if save_tender(self.request):
+            self.LOGGER.info('Created tender document {}'.format(document.id),
+                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_create'}, {'document_id': document.id}))
+            self.request.response.status = 201
+            document_route = self.request.matched_route.name.replace("collection_", "")
+            self.request.response.headers['Location'] = self.request.current_route_url(_route_name=document_route, document_id=document.id, _query={})
+            return {'data': document.serialize("view")}
 
     @json_view(permission='view_tender')
     def get(self):
@@ -75,31 +70,21 @@ class TenderDocumentResource(APIResource):
         ]
         return {'data': document_data}
 
-    @json_view(permission='upload_tender_documents', validators=(validate_file_update,))
+    @json_view(permission='upload_tender_documents', validators=(validate_file_update, validate_update_tender_document_in_not_allowed_status))
     def put(self):
         """Tender Document Update"""
-        try:
-            validate_update_tender_document_in_not_allowed_status(self.request)
-        except ViewPermissionValidationError:
-            return
-        else:
-            document = upload_file(self.request)
-            self.request.validated['tender'].documents.append(document)
-            if save_tender(self.request):
-                self.LOGGER.info('Updated tender document {}'.format(self.request.context.id),
-                            extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_put'}))
-                return {'data': document.serialize("view")}
+        document = upload_file(self.request)
+        self.request.validated['tender'].documents.append(document)
+        if save_tender(self.request):
+            self.LOGGER.info('Updated tender document {}'.format(self.request.context.id),
+                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_put'}))
+            return {'data': document.serialize("view")}
 
-    @json_view(content_type="application/json", permission='upload_tender_documents', validators=(validate_patch_document_data,))
+    @json_view(content_type="application/json", permission='upload_tender_documents', validators=(validate_patch_document_data, validate_update_tender_document_in_not_allowed_status))
     def patch(self):
         """Tender Document Update"""
-        try:
-            validate_update_tender_document_in_not_allowed_status(self.request)
-        except ViewPermissionValidationError:
-            return
-        else:
-            if apply_patch(self.request, src=self.request.context.serialize()):
-                update_file_content_type(self.request)
-                self.LOGGER.info('Updated tender document {}'.format(self.request.context.id),
-                            extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_patch'}))
-                return {'data': self.request.context.serialize("view")}
+        if apply_patch(self.request, src=self.request.context.serialize()):
+            update_file_content_type(self.request)
+            self.LOGGER.info('Updated tender document {}'.format(self.request.context.id),
+                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_document_patch'}))
+            return {'data': self.request.context.serialize("view")}

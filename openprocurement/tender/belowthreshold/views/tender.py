@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from openprocurement.api.utils import context_unpack, json_view, APIResource
-from openprocurement.api.validation import ViewPermissionValidationError
 
 from openprocurement.tender.core.utils import (
     save_tender, optendersresource, apply_patch
@@ -115,7 +114,7 @@ class TenderResource(APIResource):
             tender_data = self.context.serialize(self.context.status)
         return {'data': tender_data}
 
-    @json_view(content_type="application/json", validators=(validate_patch_tender_data, ), permission='edit_tender')
+    @json_view(content_type="application/json", validators=(validate_patch_tender_data, validate_tender_status_update_in_terminated_status), permission='edit_tender')
     def patch(self):
         """Tender Edit (partial)
 
@@ -165,17 +164,12 @@ class TenderResource(APIResource):
 
         """
         tender = self.context
-        try:
-            validate_tender_status_update_in_terminated_status(self.request, tender)
-        except ViewPermissionValidationError:
-            return
+        if self.request.authenticated_role == 'chronograph':
+            apply_patch(self.request, save=False, src=self.request.validated['tender_src'])
+            check_status(self.request)
+            save_tender(self.request)
         else:
-            if self.request.authenticated_role == 'chronograph':
-                apply_patch(self.request, save=False, src=self.request.validated['tender_src'])
-                check_status(self.request)
-                save_tender(self.request)
-            else:
-                apply_patch(self.request, src=self.request.validated['tender_src'])
-            self.LOGGER.info('Updated tender {}'.format(tender.id),
-                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_patch'}))
-            return {'data': tender.serialize(tender.status)}
+            apply_patch(self.request, src=self.request.validated['tender_src'])
+        self.LOGGER.info('Updated tender {}'.format(tender.id),
+                    extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_patch'}))
+        return {'data': tender.serialize(tender.status)}
