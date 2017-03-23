@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from openprocurement.api.utils import update_logging_context
 from openprocurement.api.validation import validate_data
+from openprocurement.tender.core.utils import error_handler
 from openprocurement.tender.belowthreshold.utils import  check_document
 
 
@@ -8,11 +9,11 @@ def validate_bid_data(request):
     if not request.check_accreditation(request.tender.edit_accreditation):
         request.errors.add('procurementMethodType', 'accreditation', 'Broker Accreditation level does not permit bid creation')
         request.errors.status = 403
-        return
+        raise error_handler(request.errors)
     if request.tender.get('mode', None) is None and request.check_accreditation('t'):
         request.errors.add('procurementMethodType', 'mode', 'Broker Accreditation level does not permit bid creation')
         request.errors.status = 403
-        return
+        raise error_handler(request.errors)
     update_logging_context(request, {'bid_id': '__new__'})
     model = type(request.tender).bids.model_class
     bid = validate_data(request, model)
@@ -21,7 +22,7 @@ def validate_bid_data(request):
         if any([key == 'documents' or 'Documents' in key for key in validated_bid.keys()]):
             bid_documents = validate_bid_documents(request)
             if not bid_documents:
-                return
+                raise error_handler(request.errors)
             for documents_type, documents in bid_documents.items():
                 validated_bid[documents_type] = documents
     return bid
@@ -78,3 +79,19 @@ def validate_bid_documents(request):
             document = check_document(request, document, doc_type, route_kwargs)
             documents[doc_type].append(document)
     return documents
+
+# tender documents
+def validate_add_tender_document_in_not_allowed_status(request):
+    if request.authenticated_role != 'auction' and request.validated['tender_status'] != 'active.enquiries' or \
+       request.authenticated_role == 'auction' and request.validated['tender_status'] not in ['active.auction', 'active.qualification']:
+        request.errors.add('body', 'data', 'Can\'t add document in current ({}) tender status'.format(request.validated['tender_status']))
+        request.errors.status = 403
+        raise error_handler(request.errors)
+
+
+def validate_update_tender_document_in_not_allowed_status(request):
+    if request.authenticated_role != 'auction' and request.validated['tender_status'] != 'active.enquiries' or \
+       request.authenticated_role == 'auction' and request.validated['tender_status'] not in ['active.auction', 'active.qualification']:
+        request.errors.add('body', 'data', 'Can\'t update document in current ({}) tender status'.format(request.validated['tender_status']))
+        request.errors.status = 403
+        raise error_handler(request.errors)
