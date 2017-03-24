@@ -49,7 +49,7 @@ from openprocurement.tender.core.constants import (
     CPV_ITEMS_CLASS_FROM, COMPLAINT_STAND_STILL_TIME
 )
 
-enquiries_role = (blacklist('owner_token', '_attachments', 'revisions', 'bids', 'numberOfBids') + schematics_embedded_role)
+enquiries_role = (blacklist('owner_token', 'transfer_token', '_attachments', 'revisions', 'bids', 'numberOfBids') + schematics_embedded_role)
 Administrator_role = whitelist('status', 'mode', 'procuringEntity', 'auctionPeriod', 'lots')
 
 
