@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
 from datetime import timedelta
+from email.header import Header
 
 from openprocurement.api.utils import get_now
 from openprocurement.tender.belowthreshold.tests.base import (
@@ -659,6 +660,55 @@ def tender_features_invalid(self):
     self.assertEqual(response.status, '200 OK')
 
 
+def tender_lot_document(self):
+    response = self.app.post('/tenders/{}/documents?acc_token={}'.format(
+        self.tender_id, self.tender_token), upload_files=[('file', str(Header(u'укр.doc', 'utf-8')), 'content')])
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.content_type, 'application/json')
+    doc_id = response.json["data"]['id']
+    #dateModified = response.json["data"]['dateModified']
+    self.assertIn(doc_id, response.headers['Location'])
+    self.assertEqual(u'укр.doc', response.json["data"]["title"])
+    self.assertNotIn("documentType", response.json["data"])
+
+    response = self.app.patch_json('/tenders/{}/documents/{}?acc_token={}'.format(self.tender_id, doc_id, self.tender_token), {"data": {
+        "documentOf": "lot"
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(response.json['errors'], [
+        {u'description': [u'This field is required.'], u'location': u'body', u'name': u'relatedItem'},
+    ])
+
+    response = self.app.patch_json('/tenders/{}/documents/{}?acc_token={}'.format(self.tender_id, doc_id, self.tender_token), {"data": {
+        "documentOf": "lot",
+        "relatedItem": '0' * 32
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(response.json['errors'], [
+        {u'description': [u'relatedItem should be one of lots'], u'location': u'body', u'name': u'relatedItem'}
+    ])
+
+    # get tender for lot id
+    response = self.app.get('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token), status=200)
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+    tender = response.json['data']
+
+    # add document with lot_id
+    lot_id = tender['lots'][0]['id']
+    response = self.app.patch_json('/tenders/{}/documents/{}?acc_token={}'.format(self.tender_id, doc_id, self.tender_token), {"data": {
+        "documentOf": "lot",
+        "relatedItem": lot_id
+    }}, status=200)
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['data']['relatedItem'], lot_id)
+
+
 # Tender Lot Bid Resource Test
 
 
@@ -763,18 +813,6 @@ def patch_tender_bid(self):
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data']['lotValues'][0]["value"]["amount"], 400)
     self.assertNotEqual(response.json['data']['lotValues'][0]['date'], lot['date'])
-
-    self.set_status('complete')
-
-    response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']))
-    self.assertEqual(response.status, '200 OK')
-    self.assertEqual(response.content_type, 'application/json')
-    self.assertEqual(response.json['data']['lotValues'][0]["value"]["amount"], 400)
-
-    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {'lotValues': [{"value": {"amount": 500}, 'relatedLot': lot_id}]}}, status=403)
-    self.assertEqual(response.status, '403 Forbidden')
-    self.assertEqual(response.content_type, 'application/json')
-    self.assertEqual(response.json['errors'][0]["description"], "Can't update bid in current (complete) tender status")
 
 
 # Tender Lot Feature Bid Resource Test
