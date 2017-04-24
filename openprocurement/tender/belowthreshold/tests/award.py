@@ -145,7 +145,7 @@ class TenderAwardResourceTest(TenderContentWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['data'][-1], award)
-        
+
         award_request_path = '/tenders/{}/awards/{}?acc_token={}'.format(self.tender_id, award['id'], self.tender_token)
         response = self.app.patch_json(award_request_path, {"data": {"status": "active"}})
         self.assertEqual(response.status, '200 OK')
@@ -275,7 +275,7 @@ class TenderAwardResourceTest(TenderContentWebTest):
         self.assertEqual(response.status, '201 Created')
         self.assertEqual(response.content_type, 'application/json')
         award = response.json['data']
-        
+
         self.app.authorization = auth
         response = self.app.patch_json('/tenders/{}/awards/{}?acc_token={}'.format(self.tender_id, award['id'], self.tender_token),
                                        {"data": {"status": "unsuccessful"}})
@@ -294,7 +294,7 @@ class TenderAwardResourceTest(TenderContentWebTest):
         self.assertEqual(response.status, '200 OK')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(len(response.json['data']), 2)
-        
+
         bid_token = self.initial_bids_tokens.values()[0]
         response = self.app.post_json('/tenders/{}/awards/{}/complaints?acc_token={}'.format(self.tender_id, award['id'], bid_token), {'data': {
             'title': 'complaint title',
@@ -694,6 +694,51 @@ class Tender2LotAwardResourceTest(TenderContentWebTest):
         self.assertEqual(response.status, '403 Forbidden')
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['errors'][0]["description"], "Can update award only in active lot status")
+
+    def test_cancel_merged_award(self):
+        # Create first award
+        self.app.authorization = ('Basic', ('token', ''))
+        request_path = '/tenders/{}/awards'.format(self.tender_id)
+        response = self.app.post_json(request_path, {'data': {'suppliers': [test_organization], 'status': u'pending',
+                                                              'bid_id': self.initial_bids[0]['id'],
+                                                              'lotID': self.initial_lots[0]['id'], "value": {"amount": 500}}})
+        self.assertEqual(response.status, '201 Created')
+        self.assertEqual(response.content_type, 'application/json')
+        first_award = response.json['data']
+
+        response = self.app.patch_json('/tenders/{}/awards/{}'.format(self.tender_id, first_award['id']), {"data": {"status": "active"}})
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['data']['status'], 'active')
+
+        # Create second award
+        request_path = '/tenders/{}/awards'.format(self.tender_id)
+        response = self.app.post_json(request_path, {'data': {'suppliers': [test_organization], 'status': u'pending',
+                                                              'bid_id': self.initial_bids[0]['id'],
+                                                              'lotID': self.initial_lots[0]['id'], "value": {"amount": 500}}})
+        self.assertEqual(response.status, '201 Created')
+        self.assertEqual(response.content_type, 'application/json')
+        second_award = response.json['data']
+
+        response = self.app.patch_json('/tenders/{}/awards/{}'.format(self.tender_id, second_award['id']), {"data": {"status": "active"}})
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['data']['status'], 'active')
+
+        # Merge contract
+        response = self.app.get('/tenders/{}/contracts'.format(self.tender_id))
+        response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(
+            self.tender_id, response.json['data'][0]['id'], self.tender_token),
+            {"data": {"additionalAwardIDs": [response.json['data'][1]['awardID']]}})
+
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(response.content_type, 'application/json')
+
+        # Try to cancel second award
+        response = self.app.patch_json('/tenders/{}/awards/{}'.format(self.tender_id, second_award['id']),
+                                       {"data": {"status": "cancelled"}}, status=403)
+        self.assertEqual(response.status, '403 Forbidden')
+        self.assertEqual(response.json['errors'][0]["description"], "Can\'t cancel award while it is a part of merged contracts.")
 
 
 class TenderAwardComplaintResourceTest(TenderContentWebTest):

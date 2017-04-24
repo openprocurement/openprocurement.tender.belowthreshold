@@ -146,6 +146,14 @@ def validate_create_award_only_for_active_lot(request):
     if any([i.status != 'active' for i in tender.lots if i.id == award.lotID]):
         raise_operation_error(request, 'Can create award only in active lot status')
 
+
+def validate_cancel_award_of_merged_contracts(request):
+    tender = request.validated['tender']
+    award = request.validated['award']
+    if request.validated['data'].get('status') == 'cancelled' and \
+            [i for i in tender.contracts if i.awardID == award.id and i.status == 'merged']:
+        raise_operation_error(request,'Can\'t cancel award while it is a part of merged contracts.')
+
 # award complaint
 def validate_award_complaint_update_not_in_allowed_status(request):
     if request.context.status not in ['draft', 'claim', 'answered', 'pending']:
