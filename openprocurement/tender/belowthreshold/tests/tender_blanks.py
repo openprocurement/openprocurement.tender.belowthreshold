@@ -688,6 +688,7 @@ def tender_fields(self):
         [u'id', u'dateModified', u'tenderID', u'date', u'status', u'procurementMethod', u'awardCriteria',
          u'submissionMethod', u'next_check', u'owner']))
     self.assertIn(tender['id'], response.headers['Location'])
+    self.assertNotIn('transfer_token', tender)
 
 
 def get_tender(self):
@@ -703,6 +704,7 @@ def get_tender(self):
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data'], tender)
+    self.assertNotIn('transfer_token', response.json['data'])
 
     response = self.app.get('/tenders/{}?opt_jsonp=callback'.format(tender['id']))
     self.assertEqual(response.status, '200 OK')
