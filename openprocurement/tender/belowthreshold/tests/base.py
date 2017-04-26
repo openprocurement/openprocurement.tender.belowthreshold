@@ -204,6 +204,7 @@ class BaseTenderWebTest(BaseTWT):
     relative_to = os.path.dirname(__file__)
     # Statuses for test, that will be imported from others procedures
     primary_tender_status_name = 'active.enquiries'
+    test_question_claim_block_status = "active.pre-qualification"
     test_forbidden_document_actions_status = 'active.tendering'
     test_forbidden_question_actions_status = 'active.tendering'
     test_status_that_denies_get_post_patch_auction = 'active.tendering'
