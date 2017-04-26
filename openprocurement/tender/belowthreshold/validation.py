@@ -3,43 +3,6 @@ from openprocurement.api.utils import update_logging_context, error_handler, rai
 from openprocurement.api.validation import validate_data, OPERATIONS
 
 
-def validate_patch_bid_data(request):
-    model = type(request.tender).bids.model_class
-    return validate_data(request, model, True)
-
-
-def validate_award_data(request):
-    update_logging_context(request, {'award_id': '__new__'})
-    model = type(request.tender).awards.model_class
-    return validate_data(request, model)
-
-
-def validate_patch_award_data(request):
-    model = type(request.tender).awards.model_class
-    return validate_data(request, model, True)
-
-
-def validate_cancellation_data(request):
-    update_logging_context(request, {'cancellation_id': '__new__'})
-    model = type(request.tender).cancellations.model_class
-    return validate_data(request, model)
-
-
-def validate_patch_cancellation_data(request):
-    model = type(request.tender).cancellations.model_class
-    return validate_data(request, model, True)
-
-
-def validate_contract_data(request):
-    update_logging_context(request, {'contract_id': '__new__'})
-    model = type(request.tender).contracts.model_class
-    return validate_data(request, model)
-
-
-def validate_patch_contract_data(request):
-    model = type(request.tender).contracts.model_class
-    return validate_data(request, model, True)
-
 # tender documents
 def validate_document_operation_in_not_allowed_tender_status(request):
     if request.authenticated_role != 'auction' and request.validated['tender_status'] != 'active.enquiries' or \
