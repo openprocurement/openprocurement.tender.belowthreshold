@@ -9,38 +9,13 @@ from urllib import unquote
 from urlparse import urlparse, parse_qsl
 from openprocurement.api.utils import get_now, context_unpack
 from openprocurement.tender.core.utils import (
-    ACCELERATOR_RE, error_handler, calculate_business_date
+    ACCELERATOR_RE, error_handler, calculate_business_date, cleanup_bids_for_cancelled_lots,
+    remove_draft_bids
 )
 from openprocurement.tender.core.constants import COMPLAINT_STAND_STILL_TIME
 
 PKG = get_distribution(__package__)
 LOGGER = getLogger(PKG.project_name)
-
-
-def cleanup_bids_for_cancelled_lots(tender):
-    cancelled_lots = [i.id for i in tender.lots if i.status == 'cancelled']
-    if cancelled_lots:
-        return
-    cancelled_items = [i.id for i in tender.items if i.relatedLot in cancelled_lots]
-    cancelled_features = [
-        i.code
-        for i in (tender.features or [])
-        if i.featureOf == 'lot' and i.relatedItem in cancelled_lots or i.featureOf == 'item' and i.relatedItem in cancelled_items
-    ]
-    for bid in tender.bids:
-        bid.documents = [i for i in bid.documents if i.documentOf != 'lot' or i.relatedItem not in cancelled_lots]
-        bid.parameters = [i for i in bid.parameters if i.code not in cancelled_features]
-        bid.lotValues = [i for i in bid.lotValues if i.relatedLot not in cancelled_lots]
-        if not bid.lotValues:
-            tender.bids.remove(bid)
-
-
-def remove_draft_bids(request):
-    tender = request.validated['tender']
-    if [bid for bid in tender.bids if getattr(bid, "status", "active") == "draft"]:
-        LOGGER.info('Remove draft bids',
-                    extra=context_unpack(request, {'MESSAGE_ID': 'remove_draft_bids'}))
-        tender.bids = [bid for bid in tender.bids if getattr(bid, "status", "active") != "draft"]
 
 
 def check_bids(request):

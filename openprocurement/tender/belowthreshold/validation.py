@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from openprocurement.api.utils import update_logging_context, error_handler, raise_operation_error
+from openprocurement.api.utils import update_logging_context, error_handler, raise_operation_error, check_document
 from openprocurement.api.validation import validate_data, OPERATIONS
 
 
@@ -77,13 +77,6 @@ def validate_update_complaint_not_in_allowed_status(request):
 def validate_complaint_document_operation_not_in_allowed_status(request):
     if request.validated['tender_status'] not in ['active.enquiries', 'active.tendering', 'active.auction', 'active.qualification', 'active.awarded']:
         raise_operation_error(request, 'Can\'t {} document in current ({}) tender status'.format(OPERATIONS.get(request.method), request.validated['tender_status']))
-
-
-def validate_complaint_document_update_not_by_author(request):
-    if request.authenticated_role != request.context.author:
-        request.errors.add('url', 'role', 'Can update document only author')
-        request.errors.status = 403
-        raise error_handler(request.errors)
 
 
 def validate_role_and_status_for_add_complaint_document(request):
