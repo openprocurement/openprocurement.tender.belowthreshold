@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import unittest
+from copy import deepcopy
 
 from openprocurement.api.tests.base import snitch
 
@@ -27,7 +28,38 @@ from openprocurement.tender.belowthreshold.tests.contract_blanks import (
     # Tender2LotContractDocumentResourceTest
     lot2_create_tender_contract_document,
     lot2_put_tender_contract_document,
-    lot2_patch_tender_contract_document
+    lot2_patch_tender_contract_document,
+    # TenderMergedContracts2LotsResourceTest
+    not_found_contract_for_award,
+    try_merge_not_real_award,
+    try_merge_itself,
+    standstill_period,
+    activate_contract_with_complaint,
+    cancel_award,
+    cancel_main_award,
+    merge_two_contracts_with_different_suppliers_id,
+    merge_two_contracts_with_different_suppliers_scheme,
+    set_big_value,
+    value_and_merge_contract_in_one_patch,
+    # TenderMergedContracts3LotsResourceTest
+    merge_three_contracts,
+    standstill_period_3lots,
+    activate_contract_with_complaint_3lot,
+    cancel_award_3lot,
+    cancel_main_award_3lot,
+    try_merge_pending_award,
+    additional_awards_dateSigned,
+    # TenderMergedContracts4LotsResourceTest
+    merge_four_contracts,
+    sign_contract,
+    cancel_award_4lot,
+    cancel_main_award_4lot,
+    cancel_first_main_award,
+    merge_by_two_contracts,
+    try_merge_main_contract,
+    try_merge_contract_two_times,
+    activate_contract_with_complaint_4lot,
+    additional_awards_dateSigned_4lot,
 )
 
 
@@ -154,6 +186,94 @@ class Tender2LotContractDocumentResourceTest(TenderContentWebTest):
     lot2_create_tender_contract_document = snitch(lot2_create_tender_contract_document)
     lot2_put_tender_contract_document = snitch(lot2_put_tender_contract_document)
     lot2_patch_tender_contract_document = snitch(lot2_patch_tender_contract_document)
+
+
+def prepare_bids(init_bids):
+    """ Make different indetifier id for every bid """
+    init_bids = deepcopy(init_bids)
+    base_identifier_id = int(init_bids[0]['tenderers'][0]['identifier']['id'])
+    for bid in init_bids:
+        base_identifier_id += 1
+        bid['tenderers'][0]['identifier']['id'] = "{:0=8}".format(base_identifier_id)
+    return init_bids
+
+
+
+class TenderMergedContracts2LotsResourceTest(TenderContentWebTest):
+    initial_status = 'active.qualification'
+    initial_bids = prepare_bids(test_bids)
+    initial_lots = deepcopy(2 * test_lots)
+    initial_auth = ('Basic', ('broker', ''))
+
+    def create_awards(self):
+        authorization = self.app.authorization
+        self.app.authorization = ('Basic', ('token', ''))  # set admin role
+        # create two awards
+        awards_response = list()
+        for i in range(len(self.initial_lots)):
+            awards_response.append(
+                self.app.post_json(
+                    '/tenders/{}/awards'.format(self.tender_id),
+                    {'data': {'suppliers': self.initial_bids[0]['tenderers'],
+                              'status': 'pending',
+                              'bid_id': self.initial_bids[0]['id'],
+                              'value': self.initial_bids[0]['lotValues'][i]['value'],
+                              'lotID': self.initial_bids[0]['lotValues'][i]['relatedLot']}}).json['data'])
+
+        self.app.authorization = authorization
+        return awards_response
+
+    def active_awards(self, *args):
+        for award_id in args:
+            self.app.patch_json(
+                '/tenders/{}/awards/{}?acc_token={}'.format(
+                    self.tender_id, award_id, self.tender_token),
+                {"data": {"status": "active"}})
+
+    test_not_found_contract_for_award = snitch(not_found_contract_for_award)
+    test_try_merge_not_real_award = snitch(try_merge_not_real_award)
+    test_try_merge_itself = snitch(try_merge_itself)
+    test_standstill_period = snitch(standstill_period)
+    test_activate_contract_with_complaint = snitch(activate_contract_with_complaint)
+    test_cancel_award = snitch(cancel_award)
+    test_cancel_main_award = snitch(cancel_main_award)
+    test_merge_two_contracts_with_different_suppliers_id = snitch(merge_two_contracts_with_different_suppliers_id)
+    test_merge_two_contracts_with_different_suppliers_scheme = snitch(merge_two_contracts_with_different_suppliers_scheme)
+    test_set_big_value = snitch(set_big_value)
+    test_value_and_merge_contract_in_one_patch = snitch(value_and_merge_contract_in_one_patch)
+
+
+class TenderMergedContracts3LotsResourceTest(TenderContentWebTest):
+    initial_status = 'active.qualification'
+    initial_bids = prepare_bids(test_bids)
+    initial_lots = deepcopy(3 * test_lots)
+    initial_auth = ('Basic', ('broker', ''))
+
+    test_merge_three_contracts = snitch(merge_three_contracts)
+    test_standstill_period_3lots = snitch(standstill_period_3lots)
+    test_activate_contract_with_complaint_3lot = snitch(activate_contract_with_complaint_3lot)
+    test_cancel_award_3lot = snitch(cancel_award_3lot)
+    test_cancel_main_award_3lot = snitch(cancel_main_award_3lot)
+    test_try_merge_pending_award = snitch(try_merge_pending_award)
+    test_additional_awards_dateSigned = snitch(additional_awards_dateSigned)
+
+
+class TenderMergedContracts4LotsResourceTest(TenderContentWebTest):
+    initial_status = 'active.qualification'
+    initial_bids = prepare_bids(test_bids)
+    initial_lots = deepcopy(4 * test_lots)
+    initial_auth = ('Basic', ('broker', ''))
+
+    test_merge_four_contracts = snitch(merge_four_contracts)
+    test_sign_contract = snitch(sign_contract)
+    test_cancel_award_4lot = snitch(cancel_award_4lot)
+    test_cancel_main_award_4lot = snitch(cancel_main_award_4lot)
+    test_cancel_first_main_award = snitch(cancel_first_main_award)
+    test_merge_by_two_contracts = snitch(merge_by_two_contracts)
+    test_try_merge_main_contract = snitch(try_merge_main_contract)
+    test_try_merge_contract_two_times = snitch(try_merge_contract_two_times)
+    test_activate_contract_with_complaint_4lot = snitch(activate_contract_with_complaint_4lot)
+    test_additional_awards_dateSigned_4lot = snitch(additional_awards_dateSigned_4lot)
 
 
 def suite():
