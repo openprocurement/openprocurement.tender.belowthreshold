@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from datetime import datetime, timedelta
-
+from copy import deepcopy
 from openprocurement.api.constants import SANDBOX_MODE
 from openprocurement.api.utils import apply_data_patch
 from openprocurement.tender.core.tests.base import (
@@ -132,7 +132,7 @@ test_features_tender_data["features"] = [
 test_bids = [
     {
         "tenderers": [
-            test_organization
+            deepcopy(test_organization)
         ],
         "value": {
             "amount": 469,
@@ -142,7 +142,7 @@ test_bids = [
     },
     {
         "tenderers": [
-            test_organization
+            deepcopy(test_organization)
         ],
         "value": {
             "amount": 479,
@@ -379,3 +379,27 @@ class TenderContentWebTest(BaseTenderWebTest):
     def setUp(self):
         super(TenderContentWebTest, self).setUp()
         self.create_tender()
+
+    def create_awards(self):
+        authorization = self.app.authorization
+        self.app.authorization = ('Basic', ('token', ''))  # set admin role
+        # create two awards
+        awards_response = list()
+        for i in range(len(self.initial_lots)):
+            awards_response.append(
+                self.app.post_json(
+                    '/tenders/{}/awards'.format(self.tender_id),
+                    {'data': {'suppliers': self.initial_bids[0]['tenderers'],
+                              'status': 'pending',
+                              'bid_id': self.initial_bids[0]['id'],
+                              'value': self.initial_bids[0]['lotValues'][i]['value'],
+                              'lotID': self.initial_bids[0]['lotValues'][i]['relatedLot']}}))
+
+        self.app.authorization = authorization
+        return awards_response
+
+    def active_awards(self, awards):
+        for award in awards:
+            self.app.patch_json('/tenders/{}/awards/{}?acc_token={}'.format(
+                self.tender_id, award.json['data']['id'], self.tender_token),
+                {"data": {"status": "active"}})

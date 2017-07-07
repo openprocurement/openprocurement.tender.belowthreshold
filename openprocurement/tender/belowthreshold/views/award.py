@@ -26,8 +26,16 @@ from openprocurement.tender.belowthreshold.utils import (
 
 from openprocurement.tender.belowthreshold.validation import (
     validate_create_award_only_for_active_lot,
-    validate_create_award_not_in_allowed_period
+    validate_create_award_not_in_allowed_period,
+    validate_cancel_award_of_merged_contracts,
 )
+
+
+def set_pending(contracts):
+    """ Set status pending and delete mergedInto in contracts """
+    for contract in contracts:
+        contract['status'] = 'pending'
+        del contract['mergedInto']
 
 
 @optendersresource(name='belowThreshold:Tender Awards',
@@ -236,7 +244,8 @@ class TenderAwardResource(APIResource):
         """
         return {'data': self.request.validated['award'].serialize("view")}
 
-    @json_view(content_type="application/json", permission='edit_tender', validators=(validate_patch_award_data, validate_update_award_in_not_allowed_status, validate_update_award_only_for_active_lots))
+    @json_view(content_type="application/json", permission='edit_tender', validators=(validate_patch_award_data, validate_update_award_in_not_allowed_status, validate_update_award_only_for_active_lots,
+               validate_cancel_award_of_merged_contracts))
     def patch(self):
         """Update of award
 
@@ -318,8 +327,12 @@ class TenderAwardResource(APIResource):
                     j.cancellationReason = 'cancelled'
                     j.dateCanceled = now
             for i in tender.contracts:
-                if i.awardID == award.id:
+                if i.awardID == award.id and 'additionalAwardIDs' in i: # if cancelled contract has additionalAwardIDs
+                    set_pending((contract for contract in tender.contracts
+                                if contract['awardID'] in i['additionalAwardIDs']))
+                    del i['additionalAwardIDs']  # delete additionalAwardIDs from cancelled contract
                     i.status = 'cancelled'
+                    break
             add_next_award(self.request)
         elif award_status == 'pending' and award.status == 'unsuccessful':
             award.complaintPeriod.endDate = calculate_business_date(get_now(), STAND_STILL_TIME, tender, True)

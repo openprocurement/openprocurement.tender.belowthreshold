@@ -4,7 +4,7 @@ import unittest
 from openprocurement.api.tests.base import snitch
 
 from openprocurement.tender.belowthreshold.tests.base import (
-    TenderContentWebTest, test_lots, test_bids
+    TenderContentWebTest, test_lots, test_bids, test_organization
 )
 from openprocurement.tender.belowthreshold.tests.cancellation_blanks import (
     # TenderCancellationResourceTest
@@ -24,6 +24,10 @@ from openprocurement.tender.belowthreshold.tests.cancellation_blanks import (
     create_tender_cancellation_document,
     put_tender_cancellation_document,
     patch_tender_cancellation_document,
+    # TenderLotCancellationContractTest
+    create_lot_cancellation_on_merged_contract,
+    create_cancellation_on_lot_with_cancelled_awards,
+    update_lot_cancellation_on_merged_contract,
 )
 
 
@@ -63,6 +67,17 @@ class TenderLotsCancellationResourceTest(TenderContentWebTest):
 
     test_create_tender_lots_cancellation = snitch(create_tender_lots_cancellation)
     test_patch_tender_lots_cancellation = snitch(patch_tender_lots_cancellation)
+
+
+class TenderLotCancellationContractTest(TenderContentWebTest):
+    initial_status = 'active.qualification'
+    initial_lots = 2 * test_lots
+    initial_bids = test_bids
+    test_organization = test_organization
+
+    create_lot_cancellation_on_merged_contract = snitch(create_lot_cancellation_on_merged_contract)
+    create_cancellation_on_lot_with_cancelled_awards = snitch(create_cancellation_on_lot_with_cancelled_awards)
+    update_lot_cancellation_on_merged_contract = snitch(update_lot_cancellation_on_merged_contract)
 
 
 class TenderCancellationDocumentResourceTest(TenderContentWebTest, TenderCancellationDocumentResourceTestMixin):

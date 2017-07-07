@@ -27,6 +27,7 @@ from openprocurement.tender.belowthreshold.tests.award_blanks import (
     # Tender2LotAwardResourceTest
     create_tender_lots_award,
     patch_tender_lots_award,
+    cancel_merged_award,
     # TenderAwardComplaintResourceTest
     create_tender_award_complaint_invalid,
     create_tender_award_complaint,
@@ -149,6 +150,7 @@ class Tender2LotAwardResourceTest(TenderContentWebTest):
 
     test_create_tender_lots_award = snitch(create_tender_lots_award)
     test_patch_tender_lots_award = snitch(patch_tender_lots_award)
+    test_cancel_merged_award = snitch(cancel_merged_award)
 
 
 class TenderAwardComplaintResourceTest(TenderContentWebTest, TenderAwardComplaintResourceTestMixin):
