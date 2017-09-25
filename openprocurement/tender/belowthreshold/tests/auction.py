@@ -34,6 +34,7 @@ from openprocurement.tender.belowthreshold.tests.auction_blanks import (
     post_tender_lots_auction_document,
     # TenderFeaturesAuctionResourceTest
     get_tender_auction_feature,
+    post_tender_auction_feature,
 )
 
 
@@ -151,6 +152,7 @@ class TenderFeaturesAuctionResourceTest(TenderContentWebTest):
     ]
 
     test_get_tender_auction_feature = snitch(get_tender_auction_feature)
+    test_post_tender_auction_feature = snitch(post_tender_auction_feature)
 
 
 def suite():
