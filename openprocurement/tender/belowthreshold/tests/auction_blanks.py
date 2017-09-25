@@ -996,3 +996,50 @@ def get_tender_auction_feature(self):
     self.assertEqual(auction["bids"][1]['value']['amount'], self.initial_bids[1]['value']['amount'])
     self.assertIn('features', auction)
     self.assertIn('parameters', auction["bids"][0])
+
+
+def post_tender_auction_feature(self):
+    self.app.authorization = ('Basic', ('auction', ''))
+    response = self.app.post_json('/tenders/{}/auction'.format(self.tender_id), {'data': {'bids': [{'invalid_field': 'invalid_value'}]}}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['errors'], [
+        {u'description': {u'invalid_field': u'Rogue field'}, u'location': u'body', u'name': u'bids'}
+    ])
+
+    patch_data = {
+        'bids': [
+            {
+                "id": self.initial_bids[1]['id'],
+                "value": {
+                    'contractDuration': {'years': 10},
+                 },
+            },
+        ]
+    }
+
+    response = self.app.post_json('/tenders/{}/auction'.format(self.tender_id), {'data': patch_data}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+
+    patch_data['bids'].append({
+        "id": "some_id",
+        "value": {
+            'yearlyPaymentsPercentage': 0.9,
+            'contractDuration': {'years': 10},
+        },
+    })
+
+    response = self.app.post_json('/tenders/{}/auction'.format(self.tender_id), {'data': patch_data}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+
+    patch_data['bids'][1]['id'] = "00000000000000000000000000000000"
+    response = self.app.post_json('/tenders/{}/auction'.format(self.tender_id), {'data': patch_data}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+
+    patch_data['bids'][1]['id'] = self.initial_bids[0]['id']
+    response = self.app.post_json('/tenders/{}/auction'.format(self.tender_id), {'data': patch_data}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
