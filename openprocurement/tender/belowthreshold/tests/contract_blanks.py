@@ -193,6 +193,110 @@ def patch_tender_contract(self):
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.json['data']['value']['amount'], 238)
 
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": 0}}}
+    )
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": 21}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Int value should be less than 20.']},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": -1}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Int value should be greater than 0.']},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": 0.5}}}
+    )
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+
+    response = self.app.get('/tenders/{}/contracts/{}'.format(self.tender_id, contract['id']))
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 0)
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": 20.5}}}
+    )
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 20)
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": '7.5'}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u"Value '7.5' is not int."]},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": None}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ["This field is required."]}
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": '7'}}}
+    )
+
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['amount'], 238)
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 7)
+
     response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token), {"data": {"dateSigned": i['complaintPeriod']['endDate']}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.json['errors'], [{u'description': [u'Contract signature date should be after award complaint period end date ({})'.format(i['complaintPeriod']['endDate'])], u'location': u'body', u'name': u'dateSigned'}])
@@ -239,6 +343,18 @@ def patch_tender_contract(self):
     self.assertEqual(response.status, '403 Forbidden')
     self.assertEqual(response.json['errors'][0]["description"], "Can't update contract in current (complete) tender status")
 
+    response = self.app.patch_json(
+        '/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token),
+        {"data": {"value": {"valueAddedTaxPercentage": 20}}}, status=403
+    )
+    self.assertEqual(response.status, '403 Forbidden')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'][0]['description'],
+        u"Can't update contract in current (complete) tender status"
+    )
+
     response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(self.tender_id, contract['id'], self.tender_token), {"data": {"contractID": "myselfID"}}, status=403)
     self.assertEqual(response.status, '403 Forbidden')
     self.assertEqual(response.json['errors'][0]["description"], "Can't update contract in current (complete) tender status")
@@ -279,6 +395,7 @@ def patch_tender_contract(self):
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data']["status"], "active")
     self.assertEqual(response.json['data']["value"]['amount'], 238)
+    self.assertEqual(response.json['data']['value']['valueAddedTaxPercentage'], 7)
     self.assertEqual(response.json['data']['contractID'], contract['contractID'])
     self.assertEqual(response.json['data']['items'], contract['items'])
     self.assertEqual(response.json['data']['suppliers'], contract['suppliers'])

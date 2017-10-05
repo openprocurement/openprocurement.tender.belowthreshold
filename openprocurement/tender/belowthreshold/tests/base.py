@@ -137,7 +137,8 @@ test_bids = [
         "value": {
             "amount": 469,
             "currency": "UAH",
-            "valueAddedTaxIncluded": True
+            "valueAddedTaxIncluded": True,
+            "valueAddedTaxPercentage": 20
         }
     },
     {
@@ -147,7 +148,8 @@ test_bids = [
         "value": {
             "amount": 479,
             "currency": "UAH",
-            "valueAddedTaxIncluded": True
+            "valueAddedTaxIncluded": True,
+            "valueAddedTaxPercentage": 7
         }
     }
 ]
