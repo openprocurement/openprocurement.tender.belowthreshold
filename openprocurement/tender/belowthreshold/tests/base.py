@@ -151,6 +151,42 @@ test_bids = [
         }
     }
 ]
+test_features_bids = [
+    {
+        "parameters": [
+            {
+                "code": i["code"],
+                "value": 0.1,
+            }
+            for i in test_features_tender_data['features']
+        ],
+        "tenderers": [
+            test_organization
+        ],
+        "value": {
+            "amount": 469,
+            "currency": "UAH",
+            "valueAddedTaxIncluded": True
+        }
+    },
+    {
+        "parameters": [
+            {
+                "code": i["code"],
+                "value": 0.15,
+            }
+            for i in test_features_tender_data['features']
+        ],
+        "tenderers": [
+            test_organization
+        ],
+        "value": {
+            "amount": 479,
+            "currency": "UAH",
+            "valueAddedTaxIncluded": True
+        }
+    }
+]
 test_lots = [
     {
         'title': 'lot title',

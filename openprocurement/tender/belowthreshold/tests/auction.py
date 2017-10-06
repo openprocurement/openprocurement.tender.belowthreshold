@@ -9,6 +9,7 @@ from openprocurement.tender.belowthreshold.tests.base import (
     test_tender_data,
     test_features_tender_data,
     test_bids,
+    test_features_bids,
     test_lots,
     test_organization
 )
@@ -34,6 +35,13 @@ from openprocurement.tender.belowthreshold.tests.auction_blanks import (
     post_tender_lots_auction_document,
     # TenderFeaturesAuctionResourceTest
     get_tender_auction_feature,
+    post_tender_auction_feature,
+    # TenderFeaturesLotAuctionResourceTest
+    get_tender_lot_auction_feature,
+    post_tender_lot_auction_feature,
+    # TenderFeaturesMultipleLotAuctionResourceTest
+    get_tender_lots_auction_feature,
+    post_tender_lots_auction_feature,
 )
 
 
@@ -113,44 +121,30 @@ class TenderMultipleLotAuctionResourceTest(TenderContentWebTest, TenderMultipleL
 class TenderFeaturesAuctionResourceTest(TenderContentWebTest):
     initial_data = test_features_tender_data
     initial_status = 'active.auction'
-    initial_bids = [
-        {
-            "parameters": [
-                {
-                    "code": i["code"],
-                    "value": 0.1,
-                }
-                for i in test_features_tender_data['features']
-            ],
-            "tenderers": [
-                test_organization
-            ],
-            "value": {
-                "amount": 469,
-                "currency": "UAH",
-                "valueAddedTaxIncluded": True
-            }
-        },
-        {
-            "parameters": [
-                {
-                    "code": i["code"],
-                    "value": 0.15,
-                }
-                for i in test_features_tender_data['features']
-            ],
-            "tenderers": [
-                test_organization
-            ],
-            "value": {
-                "amount": 479,
-                "currency": "UAH",
-                "valueAddedTaxIncluded": True
-            }
-        }
-    ]
+    initial_bids = test_features_bids
 
     test_get_tender_auction_feature = snitch(get_tender_auction_feature)
+    test_post_tender_auction_feature = snitch(post_tender_auction_feature)
+
+
+class TenderFeaturesLotAuctionResourceTest(TenderContentWebTest):
+    initial_data = test_features_tender_data
+    initial_status = 'active.auction'
+    initial_lots = test_lots
+    initial_bids = test_features_bids
+
+    test_get_tender_lot_auction_feature = snitch(get_tender_lot_auction_feature)
+    test_post_tender_lot_auction_feature = snitch(post_tender_lot_auction_feature)
+
+
+class TenderFeaturesMultipleLotAuctionResourceTest(TenderContentWebTest):
+    initial_data = test_features_tender_data
+    initial_status = 'active.auction'
+    initial_lots = 2 * test_lots
+    initial_bids = test_features_bids
+
+    test_get_tender_lots_auction_feature = snitch(get_tender_lots_auction_feature)
+    test_post_tender_lots_auction_feature = snitch(post_tender_lots_auction_feature)
 
 
 def suite():
@@ -158,6 +152,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TenderAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderSameValueAuctionResourceTest))
     suite.addTest(unittest.makeSuite(TenderFeaturesAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderFeaturesLotAuctionResourceTest))
+    suite.addTest(unittest.makeSuite(TenderFeaturesMultipleLotAuctionResourceTest))
     return suite
 
 
