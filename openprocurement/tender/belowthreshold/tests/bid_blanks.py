@@ -10,7 +10,7 @@ from openprocurement.tender.belowthreshold.tests.base import (
 
 def create_tender_bid_invalid(self):
     response = self.app.post_json('/tenders/some_id/bids', {
-                                  'data': {'tenderers': [test_organization], "value": {"amount": 500}}}, status=404)
+                                  'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}}, status=404)
     self.assertEqual(response.status, '404 Not Found')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -112,7 +112,7 @@ def create_tender_bid_invalid(self):
         {u'description': [u'valueAddedTaxIncluded of bid should be identical to valueAddedTaxIncluded of value of tender'], u'location': u'body', u'name': u'value'}
     ])
 
-    response = self.app.post_json(request_path, {'data': {'tenderers': [test_organization], "value": {"amount": 500, 'currency': "USD"}}}, status=422)
+    response = self.app.post_json(request_path, {'data': {'tenderers': [test_organization], "value": {"amount": 500, 'currency': "USD", "valueAddedTaxPercentage": 7}}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -120,7 +120,7 @@ def create_tender_bid_invalid(self):
         {u'description': [u'currency of bid should be identical to currency of value of tender'], u'location': u'body', u'name': u'value'},
     ])
 
-    response = self.app.post_json(request_path, {'data': {'tenderers': test_organization, "value": {"amount": 500}}}, status=422)
+    response = self.app.post_json(request_path, {'data': {'tenderers': test_organization, "value": {"amount": 500, "valueAddedTaxPercentage": 20}}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -128,12 +128,94 @@ def create_tender_bid_invalid(self):
         {u'description': u"invalid literal for int() with base 10: 'contactPoint'", u'location': u'body', u'name': u'data'},
     ])
 
+    response = self.app.post_json(
+        request_path, {'data': {'tenderers': [test_organization], 'value': {'amount': 500}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(response.json['errors'], [
+        {
+            u'description': {u'valueAddedTaxPercentage': [u'This field is required.']},
+            u'location': u'body',
+            u'name': u'value'
+        }
+    ])
+
+    response = self.app.post_json(
+        request_path, {
+            'data': {'tenderers': [test_organization], 'value': {'amount': 500, 'valueAddedTaxPercentage': -1}}
+        }, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ["Int value should be greater than 0."]}
+        }]
+    )
+
+    response = self.app.post_json(
+        request_path, {
+            'data': {'tenderers': [test_organization], 'value': {'amount': 500, 'valueAddedTaxPercentage': 21}}
+        }, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Int value should be less than 20.']},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
+    response = self.app.post_json(
+        request_path, {
+            'data': {'tenderers': [test_organization], 'value': {'amount': 500, 'valueAddedTaxPercentage': ''}}
+        }, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u"Value '' is not int."]},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
+    response = self.app.post_json(
+        request_path, {
+            'data': {'tenderers': [test_organization], 'value': {'amount': 500, 'valueAddedTaxPercentage': '20.0'}}
+        }, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u"Value '20.0' is not int."]},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
 
 def create_tender_bid(self):
     dateModified = self.db.get(self.tender_id).get('dateModified')
 
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
@@ -146,7 +228,7 @@ def create_tender_bid(self):
     self.set_status('complete')
 
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}}, status=403)
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 7}}}, status=403)
     self.assertEqual(response.status, '403 Forbidden')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['errors'][0]["description"], "Can't add bid in current (complete) tender status")
@@ -154,13 +236,13 @@ def create_tender_bid(self):
 
 def patch_tender_bid(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "status": "draft", "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "status": "draft", "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
     token = response.json['access']['token']
 
-    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 600}}}, status=422)
+    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 600, "valueAddedTaxPercentage": 7}}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -174,13 +256,13 @@ def patch_tender_bid(self):
     self.assertEqual(response.json['data']['date'], bid['date'])
     self.assertNotEqual(response.json['data']['tenderers'][0]['name'], bid['tenderers'][0]['name'])
 
-    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 500}, 'tenderers': [test_organization]}})
+    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 500, "valueAddedTaxPercentage": 7}, 'tenderers': [test_organization]}})
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data']['date'], bid['date'])
     self.assertEqual(response.json['data']['tenderers'][0]['name'], bid['tenderers'][0]['name'])
 
-    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 400}}})
+    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 400, "valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data']["value"]["amount"], 400)
@@ -197,7 +279,7 @@ def patch_tender_bid(self):
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['errors'][0]["description"], "Can\'t update bid to (draft) status")
 
-    response = self.app.patch_json('/tenders/{}/bids/some_id'.format(self.tender_id), {"data": {"value": {"amount": 400}}}, status=404)
+    response = self.app.patch_json('/tenders/{}/bids/some_id'.format(self.tender_id), {"data": {"value": {"amount": 400, "valueAddedTaxPercentage": 7}}}, status=404)
     self.assertEqual(response.status, '404 Not Found')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -206,7 +288,7 @@ def patch_tender_bid(self):
             u'url', u'name': u'bid_id'}
     ])
 
-    response = self.app.patch_json('/tenders/some_id/bids/some_id', {"data": {"value": {"amount": 400}}}, status=404)
+    response = self.app.patch_json('/tenders/some_id/bids/some_id', {"data": {"value": {"amount": 400, "valueAddedTaxPercentage": 20}}}, status=404)
     self.assertEqual(response.status, '404 Not Found')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['status'], 'error')
@@ -215,14 +297,77 @@ def patch_tender_bid(self):
             u'url', u'name': u'tender_id'}
     ])
 
+    response = self.app.patch_json(
+        '/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token),
+        {"data": {"value": {'valueAddedTaxPercentage': 20}}}
+    )
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+
+    response = self.app.patch_json(
+        '/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token),
+        {'data': {"value": {'valueAddedTaxPercentage': -1}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ["Int value should be greater than 0."]}
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token),
+        {'data': {"value": {'valueAddedTaxPercentage': 21}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ['Int value should be less than 20.']}
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token),
+        {'data': {"value": {'valueAddedTaxPercentage': '20.0'}}}, status=422
+    )
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ["Value '20.0' is not int."]}
+        }]
+    )
+
+    response = self.app.patch_json(
+        '/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token),
+        {'data': {"value": {'valueAddedTaxPercentage': '7'}}}
+    )
+    self.assertEqual(response.status, '200 OK')
+    self.assertEqual(response.content_type, 'application/json')
+
     self.set_status('complete')
 
     response = self.app.get('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']))
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['data']["value"]["amount"], 400)
+    self.assertEqual(response.json['data']['value']['valueAddedTaxPercentage'], 7)
 
-    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 400}}}, status=403)
+    response = self.app.patch_json('/tenders/{}/bids/{}?acc_token={}'.format(self.tender_id, bid['id'], token), {"data": {"value": {"amount": 400, "valueAddedTaxPercentage": 7}}}, status=403)
     self.assertEqual(response.status, '403 Forbidden')
     self.assertEqual(response.content_type, 'application/json')
     self.assertEqual(response.json['errors'][0]["description"], "Can't update bid in current (complete) tender status")
@@ -230,7 +375,7 @@ def patch_tender_bid(self):
 
 def get_tender_bid(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
@@ -282,7 +427,7 @@ def get_tender_bid(self):
 
 def delete_tender_bid(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500,"valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
@@ -318,7 +463,7 @@ def delete_tender_bid(self):
 
 def get_tender_tenderers(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
@@ -347,7 +492,7 @@ def get_tender_tenderers(self):
 
 def bid_Administrator_change(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 7}}})
     self.assertEqual(response.status, '201 Created')
     self.assertEqual(response.content_type, 'application/json')
     bid = response.json['data']
@@ -355,11 +500,12 @@ def bid_Administrator_change(self):
     self.app.authorization = ('Basic', ('administrator', ''))
     response = self.app.patch_json('/tenders/{}/bids/{}'.format(self.tender_id, bid['id']), {"data": {
         'tenderers': [{"identifier": {"id": "00000000"}}],
-        "value": {"amount": 400}
+        "value": {"amount": 400, "valueAddedTaxPercentage": 20}
     }})
     self.assertEqual(response.status, '200 OK')
     self.assertEqual(response.content_type, 'application/json')
     self.assertNotEqual(response.json['data']["value"]["amount"], 400)
+    self.assertNotEqual(response.json['data']['value']["valueAddedTaxPercentage"], 20)
     self.assertEqual(response.json['data']["tenderers"][0]["identifier"]["id"], "00000000")
 
 
@@ -383,7 +529,8 @@ def features_bid(self):
             "value": {
                 "amount": 469,
                 "currency": "UAH",
-                "valueAddedTaxIncluded": True
+                "valueAddedTaxIncluded": True,
+                "valueAddedTaxPercentage": 20
             }
         },
         {
@@ -401,7 +548,8 @@ def features_bid(self):
             "value": {
                 "amount": 479,
                 "currency": "UAH",
-                "valueAddedTaxIncluded": True
+                "valueAddedTaxIncluded": True,
+                "valueAddedTaxPercentage": 20
             }
         }
     ]
@@ -423,7 +571,8 @@ def features_bid_invalid(self):
         "value": {
             "amount": 469,
             "currency": "UAH",
-            "valueAddedTaxIncluded": True
+            "valueAddedTaxIncluded": True,
+            "valueAddedTaxPercentage": 20
         }
     }
     response = self.app.post_json('/tenders/{}/bids'.format(self.tender_id), {'data': data}, status=422)
@@ -817,10 +966,12 @@ def patch_tender_bid_document(self):
 
 def create_tender_bid_document_nopending(self):
     response = self.app.post_json('/tenders/{}/bids'.format(
-        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+        self.tender_id), {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
     bid = response.json['data']
     token = response.json['access']['token']
     bid_id = bid['id']
+    self.assertEqual(bid['value']['amount'], 500)
+    self.assertEqual(bid['value']['valueAddedTaxPercentage'], 20)
 
     response = self.app.post('/tenders/{}/bids/{}/documents?acc_token={}'.format(
         self.tender_id, bid_id, token), upload_files=[('file', 'name.doc', 'content')])

@@ -79,7 +79,8 @@ class TenderSameValueAuctionResourceTest(TenderContentWebTest):
             "value": {
                 "amount": 469,
                 "currency": "UAH",
-                "valueAddedTaxIncluded": True
+                "valueAddedTaxIncluded": True,
+                "valueAddedTaxPercentage": 20
             }
         }
         for i in range(3)
@@ -128,7 +129,8 @@ class TenderFeaturesAuctionResourceTest(TenderContentWebTest):
             "value": {
                 "amount": 469,
                 "currency": "UAH",
-                "valueAddedTaxIncluded": True
+                "valueAddedTaxIncluded": True,
+                "valueAddedTaxPercentage": 20
             }
         },
         {
@@ -145,7 +147,8 @@ class TenderFeaturesAuctionResourceTest(TenderContentWebTest):
             "value": {
                 "amount": 479,
                 "currency": "UAH",
-                "valueAddedTaxIncluded": True
+                "valueAddedTaxIncluded": True,
+                "valueAddedTaxPercentage": 20
             }
         }
     ]

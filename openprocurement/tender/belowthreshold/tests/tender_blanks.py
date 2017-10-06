@@ -375,6 +375,46 @@ def create_tender_invalid(self):
             u'Please use a mapping for this field or Value instance instead of unicode.'], u'location': u'body', u'name': u'value'}
     ])
 
+    data = self.initial_data['value']
+    self.initial_data['value'] = {'valueAddedTaxPercentage': 20, 'amount': 100.0, "currency": "UAH"}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['value'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{u'description': {u'valueAddedTaxPercentage': [u'Rogue field']}, u'location': u'body', u'name': u'value'}]
+    )
+
+    data = self.initial_data['value']
+    self.initial_data['value'] = {'valueAddedTaxPercentage': 0, 'amount': 100.0, "currency": "UAH"}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['value'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{u'description': {u'valueAddedTaxPercentage': [u'Rogue field']}, u'location': u'body', u'name': u'value'}]
+    )
+
+    data = self.initial_data['value']
+    self.initial_data['value'] = {'valueAddedTaxPercentage': '', 'amount': 100.0, "currency": "UAH"}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['value'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u"Value '' is not int."]},
+            u'location': u'body',
+            u'name': u'value'
+        }]
+    )
+
     response = self.app.post_json(request_path, {'data': {'procurementMethod': 'invalid_value'}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.content_type, 'application/json')
@@ -458,6 +498,54 @@ def create_tender_invalid(self):
     self.assertEqual(response.json['errors'], [
         {u'description': [u'value should be less than value of tender'], u'location': u'body', u'name': u'minimalStep'}
     ])
+
+    data = self.initial_data['minimalStep']
+    self.initial_data['minimalStep'] = {'valueAddedTaxPercentage': 20, 'amount': 100.0}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['minimalStep'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Rogue field']},
+            u'location': u'body',
+            u'name': u'minimalStep'
+        }]
+    )
+
+    data = self.initial_data['minimalStep']
+    self.initial_data['minimalStep'] = {'valueAddedTaxPercentage': 0, 'amount': 100.0}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['minimalStep'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Rogue field']},
+            u'location': u'body',
+            u'name': u'minimalStep'
+        }]
+    )
+
+    data = self.initial_data['minimalStep']
+    self.initial_data['minimalStep'] = {'valueAddedTaxPercentage': '', 'amount': 100.0}
+    response = self.app.post_json(request_path, {'data': self.initial_data}, status=422)
+    self.initial_data['minimalStep'] = data
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u"Value '' is not int."]},
+            u'location': u'body',
+            u'name': u'minimalStep'
+        }]
+    )
 
     data = self.initial_data['minimalStep']
     self.initial_data['minimalStep'] = {'amount': '100.0', 'valueAddedTaxIncluded': False}
@@ -1341,7 +1429,12 @@ def one_valid_bid_tender(self):
     # create bid
     self.app.authorization = ('Basic', ('broker', ''))
     response = self.app.post_json('/tenders/{}/bids'.format(tender_id),
-                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['amount'], 500)
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 20)
     # switch to active.qualification
     self.set_status('active.auction', {'status': 'active.tendering'})
     self.app.authorization = ('Basic', ('chronograph', ''))
@@ -1392,7 +1485,12 @@ def one_invalid_bid_tender(self):
     # create bid
     self.app.authorization = ('Basic', ('broker', ''))
     response = self.app.post_json('/tenders/{}/bids'.format(tender_id),
-                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 7}}})
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['amount'], 500)
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 7)
     # switch to active.qualification
     self.set_status('active.auction', {"auctionPeriod": {"startDate": None}, 'status': 'active.tendering'})
     self.app.authorization = ('Basic', ('chronograph', ''))
@@ -1434,13 +1532,18 @@ def first_bid_tender(self):
     # create bid
     self.app.authorization = ('Basic', ('broker', ''))
     response = self.app.post_json('/tenders/{}/bids'.format(tender_id),
-                                  {'data': {'tenderers': [test_organization], "value": {"amount": 450}}})
+                                  {'data': {'tenderers': [test_organization], "value": {"amount": 450, "valueAddedTaxPercentage": 7}}})
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['amount'], 450)
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 7)
     bid_id = response.json['data']['id']
     bid_token = response.json['access']['token']
     # create second bid
     self.app.authorization = ('Basic', ('broker', ''))
     response = self.app.post_json('/tenders/{}/bids'.format(tender_id),
-                                  {'data': {'tenderers': [test_organization], "value": {"amount": 475}}})
+                                  {'data': {'tenderers': [test_organization], "value": {"amount": 475, "valueAddedTaxPercentage": 20}}})
     # switch to active.auction
     self.set_status('active.auction')
 
@@ -1565,7 +1668,12 @@ def lost_contract_for_active_award(self):
     # create bid
     self.app.authorization = ('Basic', ('broker', ''))
     response = self.app.post_json('/tenders/{}/bids'.format(tender_id),
-                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500}}})
+                                  {'data': {'tenderers': [test_organization], "value": {"amount": 500, "valueAddedTaxPercentage": 20}}})
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.content_type, 'application/json')
+    data = response.json['data']
+    self.assertEqual(data['value']['amount'], 500)
+    self.assertEqual(data['value']['valueAddedTaxPercentage'], 20)
     # switch to active.qualification
     self.set_status('active.auction', {"auctionPeriod": {"startDate": None}, 'status': 'active.tendering'})
     self.app.authorization = ('Basic', ('chronograph', ''))

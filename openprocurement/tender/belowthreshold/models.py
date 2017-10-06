@@ -267,6 +267,10 @@ class Tender(BaseTender):
         if url and data['lots']:
             raise ValidationError(u"url should be posted for each lot")
 
+    def validate_value(self, data, value):
+        if value.valueAddedTaxPercentage or value.valueAddedTaxPercentage == 0:
+            raise ValidationError({'valueAddedTaxPercentage': ['Rogue field']})
+
     def validate_minimalStep(self, data, value):
         if value and value.amount and data.get('value'):
             if data.get('value').amount < value.amount:
@@ -275,6 +279,8 @@ class Tender(BaseTender):
                 raise ValidationError(u"currency should be identical to currency of value of tender")
             if data.get('value').valueAddedTaxIncluded != value.valueAddedTaxIncluded:
                 raise ValidationError(u"valueAddedTaxIncluded should be identical to valueAddedTaxIncluded of value of tender")
+            if value.valueAddedTaxPercentage or value.valueAddedTaxPercentage == 0:
+                raise ValidationError({'valueAddedTaxPercentage': ['Rogue field']})
 
     def validate_tenderPeriod(self, data, period):
         if period and period.startDate and data.get('enquiryPeriod') and data.get('enquiryPeriod').endDate and period.startDate < data.get('enquiryPeriod').endDate:
