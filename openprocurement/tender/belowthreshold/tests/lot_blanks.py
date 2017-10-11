@@ -115,6 +115,88 @@ def create_tender_lot_invalid(self):
     self.assertEqual(lots[0]['minimalStep']['currency'], "UAH")
     self.assertEqual(lots[0]['minimalStep']['amount'], 100)
 
+    response = self.app.post_json(request_path, {'data': {
+        'title': 'lot title',
+        'description': 'lot description',
+        'value': {'amount': 100.0, 'valueAddedTaxPercentage': 20},
+        'minimalStep': {'amount': 20.0},
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{u'description': {u'valueAddedTaxPercentage': [u'Rogue field']}, u'location': u'body', u'name': u'value'}]
+    )
+
+    response = self.app.post_json(request_path, {'data': {
+        'title': 'lot title',
+        'description': 'lot description',
+        'value': {'amount': 100.0},
+        'minimalStep': {'amount': 20.0, 'valueAddedTaxPercentage': 20},
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Rogue field']},
+            u'location': u'body',
+            u'name': u'minimalStep'
+        }]
+    )
+
+    response = self.app.post_json(request_path, {'data': {
+        'title': 'lot title',
+        'description': 'lot description',
+        'value': {'amount': 100.0, 'valueAddedTaxPercentage': 0},
+        'minimalStep': {'amount': 20.0},
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{u'description': {u'valueAddedTaxPercentage': [u'Rogue field']}, u'location': u'body', u'name': u'value'}]
+    )
+
+    response = self.app.post_json(request_path, {'data': {
+        'title': 'lot title',
+        'description': 'lot description',
+        'value': {'amount': 100.0},
+        'minimalStep': {'amount': 20.0, 'valueAddedTaxPercentage': 0},
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            u'description': {u'valueAddedTaxPercentage': [u'Rogue field']},
+            u'location': u'body',
+            u'name': u'minimalStep'
+        }]
+    )
+
+    response = self.app.post_json(request_path, {'data': {
+        'title': 'lot title',
+        'description': 'lot description',
+        'value': {'amount': 100.0, 'valueAddedTaxPercentage': ''},
+        'minimalStep': {'amount': 20.0},
+    }}, status=422)
+    self.assertEqual(response.status, '422 Unprocessable Entity')
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.json['status'], 'error')
+    self.assertEqual(
+        response.json['errors'],
+        [{
+            "location": "body",
+            "name": "value",
+            "description": {"valueAddedTaxPercentage": ["Value '' is not int."]}
+        }]
+    )
+
     response = self.app.patch_json('/tenders/{}?acc_token={}'.format(self.tender_id, self.tender_token), {"data": {"items": [{'relatedLot': '0' * 32}]}}, status=422)
     self.assertEqual(response.status, '422 Unprocessable Entity')
     self.assertEqual(response.content_type, 'application/json')
