@@ -65,6 +65,15 @@ class TenderCancellationResource(APIResource):
         cancellation.date = get_now()
         if any([i.status != 'active' for i in tender.lots if i.id == cancellation.relatedLot]):
             raise_operation_error(self.request, 'Can {} cancellation only in active lot status'.format(operation))
+        awards_id = [
+            i.id for i in tender.awards if i.lotID == cancellation.relatedLot
+        ] if tender.get('awards') else False
+        if cancellation.get('relatedLot') and [
+            c for c in tender.get('contracts') if c.awardID in awards_id and c.status == 'merged'
+        ]:
+            raise_operation_error(
+                self.request, 'Can {} cancellation on lot if corresponding contract is merged.'.format(operation)
+            )
         return True
 
     @json_view(content_type="application/json", validators=(validate_cancellation_data,), permission='edit_tender')
