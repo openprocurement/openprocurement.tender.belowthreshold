@@ -1090,9 +1090,6 @@ def merge_two_contracts_with_different_suppliers_id(self):
                                                          'value': self.initial_bids[1]['lotValues'][1]['value'],
                                                          'lotID': self.initial_bids[1]['lotValues'][1]['relatedLot']}})
 
-    print '===============', self.initial_bids[1]['tenderers']
-    print '----------------', self.initial_bids[0]['tenderers']
-
     first_award = first_award_response.json['data']
     first_award_id = first_award['id']
     second_award = second_award_response.json['data']

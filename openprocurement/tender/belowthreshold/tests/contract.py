@@ -212,7 +212,7 @@ class TenderMergedContracts2LotsResourceTest(TenderContentWebTest):
         for i in range(len(self.initial_lots)):
             awards_response.append(
                 self.app.post_json('/tenders/{}/awards'.format(self.tender_id), {'data': {
-                    'suppliers': self.initial_bids[0]['tenderers'],
+                    'suppliers': self.initial_bids[i]['tenderers'],
                     'status': 'pending',
                     'bid_id': self.initial_bids[0]['id'],
                     'value': self.initial_bids[0]['lotValues'][i]['value'],

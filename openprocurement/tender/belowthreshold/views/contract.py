@@ -22,6 +22,7 @@ from openprocurement.tender.belowthreshold.utils import (
     check_tender_status,
 )
 
+
 @optendersresource(name='belowThreshold:Tender Contracts',
                    collection_path='/tenders/{tender_id}/contracts',
                    path='/tenders/{tender_id}/contracts/{contract_id}',
