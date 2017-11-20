@@ -257,11 +257,16 @@ def add_next_award(request):
             bids = chef(bids, features, unsuccessful_awards)
             if bids:
                 bid = bids[0]
+                value = {
+                    'amount': bid['value'].amount,
+                    'currency': bid['value'].currency,
+                    'valueAddedTaxIncluded': bid['value'].valueAddedTaxIncluded
+                }
                 award = type(tender).awards.model_class({
                     'bid_id': bid['id'],
                     'lotID': lot.id,
                     'status': 'pending',
-                    'value': bid['value'],
+                    'value': value,
                     'date': get_now(),
                     'suppliers': bid['tenderers'],
                     'complaintPeriod': {
