@@ -18,7 +18,7 @@ cache:
   directories:
     - eggs
 before_install:
-  - pip install setuptools==7.0
+  - pip install setuptools==38.2.4
   - python2 bootstrap.py
 install:
   - bin/buildout -N
