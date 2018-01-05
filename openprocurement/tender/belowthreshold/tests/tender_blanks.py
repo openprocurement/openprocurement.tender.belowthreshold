@@ -782,6 +782,18 @@ def create_tender(self):
     self.assertEqual(response.json['data']['items'][0]['additionalClassifications'],
                      [additional_classification_0, additional_classification_1])
 
+    # check special 33695000-8 code without additional classifications
+    data = deepcopy(self.initial_data)
+    data["items"] = [data["items"][0]]
+    del data['items'][0]['additionalClassifications']
+    data["items"][0]['classification']['id'] = u'33695000-8'
+
+    response = self.app.post_json('/tenders', {"data": data})
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.json['data']['items'][0]['classification']['id'], '33695000-8')
+    self.assertEqual(response.json['data']['items'][0]['classification']['scheme'], u'ДК021')
+
 
 def tender_funders(self):
     tender_data = deepcopy(self.initial_data)
