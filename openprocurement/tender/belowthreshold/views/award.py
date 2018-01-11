@@ -300,10 +300,18 @@ class TenderAwardResource(APIResource):
         apply_patch(self.request, save=False, src=self.request.context.serialize())
         if award_status == 'pending' and award.status == 'active':
             award.complaintPeriod.endDate = calculate_business_date(get_now(), STAND_STILL_TIME, tender, True)
+
+            get_map = lambda v: dict(v) if v else None
+            value = get_map(award.value)
+
+            if value:
+                value.update({'amountNet': value.get('amount')})
+                value = type(tender).contracts.model_class({'value': value}).value
+
             tender.contracts.append(type(tender).contracts.model_class({
                 'awardID': award.id,
                 'suppliers': award.suppliers,
-                'value': award.value,
+                'value': value,
                 'date': get_now(),
                 'items': [i for i in tender.items if i.relatedLot == award.lotID ],
                 'contractID': '{}-{}{}'.format(tender.tenderID, self.server_id, len(tender.contracts) + 1) }))

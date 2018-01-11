@@ -15,6 +15,8 @@ from openprocurement.tender.belowthreshold.tests.contract_blanks import (
     create_tender_contract,
     create_tender_contract_in_complete_status,
     patch_tender_contract,
+    patch_tender_contract_value_without_lots,
+    patch_tender_contract_value_with_lots,
     get_tender_contract,
     get_tender_contracts,
     # Tender2LotContractResourceTest
@@ -66,6 +68,7 @@ class TenderContractResourceTest(TenderContentWebTest, TenderContractResourceTes
     test_create_tender_contract = snitch(create_tender_contract)
     test_create_tender_contract_in_complete_status = snitch(create_tender_contract_in_complete_status)
     test_patch_tender_contract = snitch(patch_tender_contract)
+    test_patch_tender_contract_value = snitch(patch_tender_contract_value_without_lots)
 
 
 class Tender2LotContractResourceTest(TenderContentWebTest):
@@ -91,6 +94,7 @@ class Tender2LotContractResourceTest(TenderContentWebTest):
         self.app.patch_json('/tenders/{}/awards/{}?acc_token={}'.format(self.tender_id, self.award_id, self.tender_token), {"data": {"status": "active"}})
 
     test_lot2_patch_tender_contract = snitch(lot2_patch_tender_contract)
+    test_patch_tender_contract_value_for_lots_procedures = snitch(patch_tender_contract_value_with_lots)
 
 
 class TenderContractDocumentResourceTest(TenderContentWebTest, TenderContractDocumentResourceTestMixin):
