@@ -3,8 +3,7 @@ from openprocurement.api.utils import (
     json_view,
     context_unpack,
     APIResource,
-    get_now,
-    raise_operation_error
+    get_now
 )
 
 from openprocurement.tender.core.utils import (
@@ -18,6 +17,7 @@ from openprocurement.tender.belowthreshold.utils import (
 from openprocurement.tender.core.validation import (
     validate_cancellation_data,
     validate_patch_cancellation_data,
+    validate_cancellation
 )
 
 
@@ -53,26 +53,12 @@ class TenderCancellationResource(APIResource):
         ]):
             add_next_award(self.request)
 
-    def validate_cancellation(self, operation):
-        """ TODO move validators
-        This class is inherited in openua, openeu, limited packages, but validate_cancellation function has different validators.
-        For now, we have no way to use different validators on methods according to procedure type.
-        """
-        tender = self.request.validated['tender']
-        if tender.status in ['complete', 'cancelled', 'unsuccessful']:
-            raise_operation_error(self.request, 'Can\'t {} cancellation in current ({}) tender status'.format(operation, tender.status))
-        cancellation = self.request.validated['cancellation']
-        cancellation.date = get_now()
-        if any([i.status != 'active' for i in tender.lots if i.id == cancellation.relatedLot]):
-            raise_operation_error(self.request, 'Can {} cancellation only in active lot status'.format(operation))
-        return True
-
-    @json_view(content_type="application/json", validators=(validate_cancellation_data,), permission='edit_tender')
+    @json_view(content_type="application/json",
+               validators=(validate_cancellation_data, validate_cancellation),
+               permission='edit_tender')
     def collection_post(self):
         """Post a cancellation
         """
-        if not self.validate_cancellation('add'):
-            return
         cancellation = self.request.validated['cancellation']
         cancellation.date = get_now()
         if cancellation.relatedLot and cancellation.status == 'active':
@@ -82,9 +68,13 @@ class TenderCancellationResource(APIResource):
         self.request.context.cancellations.append(cancellation)
         if save_tender(self.request):
             self.LOGGER.info('Created tender cancellation {}'.format(cancellation.id),
-                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_cancellation_create'}, {'cancellation_id': cancellation.id}))
+                             extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_cancellation_create'},
+                                                  {'cancellation_id': cancellation.id}))
             self.request.response.status = 201
-            self.request.response.headers['Location'] = self.request.route_url('{}:Tender Cancellations'.format(self.request.validated['tender'].procurementMethodType), tender_id=self.request.validated['tender_id'], cancellation_id=cancellation.id)
+            self.request.response.headers['Location'] = self.request.route_url(
+                '{}:Tender Cancellations'.format(self.request.validated['tender'].procurementMethodType),
+                tender_id=self.request.validated['tender_id'],
+                cancellation_id=cancellation.id)
             return {'data': cancellation.serialize("view")}
 
     @json_view(permission='view_tender')
@@ -99,18 +89,20 @@ class TenderCancellationResource(APIResource):
         """
         return {'data': self.request.validated['cancellation'].serialize("view")}
 
-    @json_view(content_type="application/json", validators=(validate_patch_cancellation_data,), permission='edit_tender')
+    @json_view(content_type="application/json",
+               validators=(validate_patch_cancellation_data, validate_cancellation),
+               permission='edit_tender')
     def patch(self):
         """Post a cancellation resolution
         """
-        if not self.validate_cancellation('update'):
-            return
         apply_patch(self.request, save=False, src=self.request.context.serialize())
+        cancellation = self.request.validated['cancellation']
+        cancellation.date = get_now()
         if self.request.context.relatedLot and self.request.context.status == 'active':
             self.cancel_lot()
         elif self.request.context.status == 'active':
             self.cancel_tender()
         if save_tender(self.request):
             self.LOGGER.info('Updated tender cancellation {}'.format(self.request.context.id),
-                        extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_cancellation_patch'}))
+                             extra=context_unpack(self.request, {'MESSAGE_ID': 'tender_cancellation_patch'}))
             return {'data': self.request.context.serialize("view")}
