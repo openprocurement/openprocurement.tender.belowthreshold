@@ -612,75 +612,18 @@ class TenderResourceTest(BaseTenderWebTest):
             i['complaintPeriod']['endDate'] = i['complaintPeriod']['startDate']
         self.db.save(tender)
 
+        tender = self.db.get(self.tender_id)
+        tender['value']['valueAddedTaxIncluded'] = False
+        self.db.save(tender)
+
         with open('docs/source/tutorial/tender-contract-set-contract-value.http', 'w') as self.app.file_obj:
             response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(
-                self.tender_id, self.contract_id, owner_token), {"data": {"contractNumber": "contract #13111", "value": {"amount": 238}}})
+                self.tender_id, self.contract_id, owner_token), {"data": {"contractNumber": "contract #13111", "value": {"amount": 538}}})
         self.assertEqual(response.status, '200 OK')
-        self.assertEqual(response.json['data']['value']['amount'], 238)
-
-        #### Setting contract signature date
-        #
-
-        with open('docs/source/tutorial/tender-contract-sign-date.http', 'w') as self.app.file_obj:
-            response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(
-                self.tender_id, self.contract_id, owner_token), {'data': {"dateSigned": get_now().isoformat()} })
-            self.assertEqual(response.status, '200 OK')
-
-        #### Setting contract period
-
-        period_dates = {"period": {"startDate": (now).isoformat(), "endDate": (now + timedelta(days=365)).isoformat()}}
-        with open('docs/source/tutorial/tender-contract-period.http', 'w') as self.app.file_obj:
-            response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(
-            self.tender_id, self.contract_id, owner_token), {'data': {'period': period_dates["period"]}})
-        self.assertEqual(response.status, '200 OK')
-
-        #### Uploading contract documentation
-        #
-
-        with open('docs/source/tutorial/tender-contract-upload-document.http', 'w') as self.app.file_obj:
-            response = self.app.post_json('/tenders/{}/contracts/{}/documents?acc_token={}'.format(self.tender_id, self.contract_id, owner_token),
-                {'data': {
-                    'title': u'contract_first_document.doc',
-                    'url': self.generate_docservice_url(),
-                    'hash': 'md5:' + '0' * 32,
-                    'format': 'application/msword',
-                }})
-            self.assertEqual(response.status, '201 Created')
-
-        with open('docs/source/tutorial/tender-contract-get-documents.http', 'w') as self.app.file_obj:
-            response = self.app.get('/tenders/{}/contracts/{}/documents'.format(
-                self.tender_id, self.contract_id))
-        self.assertEqual(response.status, '200 OK')
-
-        with open('docs/source/tutorial/tender-contract-upload-second-document.http', 'w') as self.app.file_obj:
-            response = self.app.post_json('/tenders/{}/contracts/{}/documents?acc_token={}'.format(self.tender_id, self.contract_id, owner_token),
-                {'data': {
-                    'title': u'contract_second_document.doc',
-                    'url': self.generate_docservice_url(),
-                    'hash': 'md5:' + '0' * 32,
-                    'format': 'application/msword',
-                }})
-            self.assertEqual(response.status, '201 Created')
-
-        with open('docs/source/tutorial/tender-contract-get-documents-again.http', 'w') as self.app.file_obj:
-            response = self.app.get('/tenders/{}/contracts/{}/documents'.format(
-                self.tender_id, self.contract_id))
-        self.assertEqual(response.status, '200 OK')
-
-        #### Setting contract signature date
-        #
-
-        with open('docs/source/tutorial/tender-contract-sign-date.http', 'w') as self.app.file_obj:
-            response = self.app.patch_json('/tenders/{}/contracts/{}?acc_token={}'.format(
-                self.tender_id, self.contract_id, owner_token), {'data': {"dateSigned": get_now().isoformat()} })
-            self.assertEqual(response.status, '200 OK')
-
-        #### Contract signing
-        #
+        self.assertEqual(response.json['data']['value']['amount'], 538)
 
         tender = self.db.get(self.tender_id)
-        for i in tender.get('awards', []):
-            i['complaintPeriod']['endDate'] = i['complaintPeriod']['startDate']
+        tender['value']['valueAddedTaxIncluded'] = True
         self.db.save(tender)
 
         with open('docs/source/tutorial/tender-contract-sign.http', 'w') as self.app.file_obj:

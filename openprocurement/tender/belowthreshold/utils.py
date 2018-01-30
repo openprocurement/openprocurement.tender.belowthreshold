@@ -69,10 +69,18 @@ def check_status(request):
         check_complaint_status(request, complaint, now)
     for award in tender.awards:
         if award.status == 'active' and not any([i.awardID == award.id for i in tender.contracts]):
+
+            get_map = lambda v: dict(v) if v else None
+            value = get_map(award.value)
+
+            if value:
+                value.update({'amountNet': value.get('amount')})
+                value = type(tender).contracts.model_class({'value': value}).value
+
             tender.contracts.append(type(tender).contracts.model_class({
                 'awardID': award.id,
                 'suppliers': award.suppliers,
-                'value': award.value,
+                'value': value,
                 'date': now,
                 'items': [i for i in tender.items if i.relatedLot == award.lotID ],
                 'contractID': '{}-{}{}'.format(tender.tenderID, request.registry.server_id, len(tender.contracts) + 1) }))
