@@ -36,6 +36,12 @@ from openprocurement.tender.belowthreshold.tests.bid_blanks import (
 )
 
 
+class TenderBidBatchDocumentWithDSResourceTestMixin(object):
+    test_create_tender_bid_with_document_invalid = snitch(create_tender_bid_with_document_invalid)
+    test_create_tender_bid_with_document = snitch(create_tender_bid_with_document)
+    test_create_tender_bid_with_documents = snitch(create_tender_bid_with_documents)
+
+
 class TenderBidResourceTest(TenderContentWebTest):
     initial_status = 'active.tendering'
 
@@ -82,17 +88,13 @@ class TenderBidDocumentWithDSResourceTest(TenderBidDocumentResourceTest):
     test_put_tender_bid_document_json = snitch(put_tender_bid_document_json)
 
 
-class TenderBidBatchDocumentWithDSResourceTest(TenderContentWebTest):
+class TenderBidBatchDocumentWithDSResourceTest(TenderContentWebTest, TenderBidBatchDocumentWithDSResourceTestMixin):
     docservice = True
     initial_status = 'active.tendering'
     bid_data_wo_docs = {'tenderers': [test_organization],
                         'value': {'amount': 500},
                         'documents': []
-        }
-
-    test_create_tender_bid_with_document_invalid = snitch(create_tender_bid_with_document_invalid)
-    test_create_tender_bid_with_document = snitch(create_tender_bid_with_document)
-    test_create_tender_bid_with_documents = snitch(create_tender_bid_with_documents)
+                        }
 
 
 def suite():
