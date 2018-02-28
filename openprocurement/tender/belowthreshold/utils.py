@@ -137,6 +137,12 @@ def check_status(request):
                 return
 
 
+def get_contract_by_id(contract_id, tender):
+    for contract in tender.contracts:
+        if contract_id == contract['id']:
+            return contract
+
+
 def check_tender_status(request):
     tender = request.validated['tender']
     now = get_now()
@@ -170,7 +176,9 @@ def check_tender_status(request):
                             extra=context_unpack(request, {'MESSAGE_ID': 'switched_lot_unsuccessful'}, {'LOT_ID': lot.id}))
                 lot.status = 'unsuccessful'
                 continue
-            elif last_award.status == 'active' and any([i.status == 'active' and i.awardID == last_award.id for i in tender.contracts]):
+            elif last_award.status == 'active' and (
+                    any([(i.status == 'active' or (i.status == 'merged' and get_contract_by_id(i.get('mergedInto'), tender).status == 'active')) and i.awardID == last_award.id for i in tender.contracts])
+            ):
                 LOGGER.info('Switched lot {} of tender {} to {}'.format(lot.id, tender.id, 'complete'),
                             extra=context_unpack(request, {'MESSAGE_ID': 'switched_lot_complete'}, {'LOT_ID': lot.id}))
                 lot.status = 'complete'

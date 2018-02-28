@@ -8,7 +8,7 @@ from openprocurement.api.utils import (
     raise_operation_error
 )
 from openprocurement.tender.core.utils import (
-    save_tender, optendersresource, apply_patch,
+    save_tender, optendersresource, apply_patch, check_merged_contracts,
 )
 from openprocurement.tender.core.validation import (
     validate_contract_data,
@@ -21,6 +21,7 @@ from openprocurement.tender.core.validation import (
 from openprocurement.tender.belowthreshold.utils import (
     check_tender_status,
 )
+
 
 @optendersresource(name='belowThreshold:Tender Contracts',
                    collection_path='/tenders/{tender_id}/contracts',
@@ -60,6 +61,8 @@ class TenderAwardContractResource(APIResource):
     def patch(self):
         """Update of contract
         """
+        if check_merged_contracts(self.request) is not None:
+            return
         contract_status = self.request.context.status
         apply_patch(self.request, save=False, src=self.request.context.serialize())
         if contract_status != self.request.context.status and (contract_status != 'pending' or self.request.context.status != 'active'):
