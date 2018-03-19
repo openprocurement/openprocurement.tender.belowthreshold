@@ -7,8 +7,8 @@ from datetime import timedelta
 from openprocurement.api.utils import get_now
 from openprocurement.api.constants import COORDINATES_REG_EXP, ROUTE_PREFIX, CPV_BLOCK_FROM, INN_CODES, ATC_CODES
 from openprocurement.tender.core.constants import (
-    CANT_DELETE_PERIOD_START_DATE_FROM, CPV_ITEMS_CLASS_FROM,
-    NOT_REQUIRED_ADDITIONAL_CLASSIFICATION_FROM,
+    CANT_DELETE_PERIOD_START_DATE_FROM, CPV_ITEMS_CLASS_FROM, GROUP_336_FROM,
+    NOT_REQUIRED_ADDITIONAL_CLASSIFICATION_FROM
 )
 from openprocurement.tender.belowthreshold.models import Tender
 from openprocurement.tender.belowthreshold.tests.base import (
@@ -578,16 +578,39 @@ def create_tender_invalid(self):
     self.assertIn(u'classification', response.json['errors'][0][u'description'][0])
     self.assertIn(u'id', response.json['errors'][0][u'description'][0][u'classification'])
     self.assertIn("Value must be one of [u", response.json['errors'][0][u'description'][0][u'classification'][u'id'][0])
+
     data = deepcopy(self.initial_data)
     data["items"] = [data["items"][0]]
     data["items"][0]['classification']['id'] = u'33600000-6'
     del data["items"][0]['additionalClassifications']
 
+    if get_now() > GROUP_336_FROM:
+        response = self.app.post_json(request_path, {'data': data}, status=422)
+        self.assertEqual(response.status, '422 Unprocessable Entity')
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['status'], 'error')
+        self.assertEqual(response.json['errors'], [
+            {"location": "body",
+             "name": "items",
+             "description": [{"additionalClassifications": ["This field is required."]}]
+             }])
+
     data["items"][0]['additionalClassifications'] = [{
-        "scheme": u"INN",
+        "scheme": u"incorrect_scheme",
         "id": u"17.21.1",
         "description": u"папір і картон гофровані, паперова й картонна тара"
     }]
+
+    if get_now() > GROUP_336_FROM:
+        response = self.app.post_json('/tenders', {"data": data}, status=422)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['status'], 'error')
+        self.assertEqual(response.json['errors'], [
+            {u'description': [{u'additionalClassifications': [u'One of additional classifications should be INN.']}],
+             u'location': u'body', u'name': u'items'}])
+
+    # assign correct scheme but id is wrong
+    data['items'][0]['additionalClassifications'][0]['scheme'] = u'INN'
 
     response = self.app.post_json('/tenders', {"data": data}, status=422)
     self.assertEqual(response.content_type, 'application/json')
@@ -598,7 +621,7 @@ def create_tender_invalid(self):
                          u'name': u'items', u'location': u'body'}]
                      )
 
-    # assign correct id code
+    # assign correct id code for INN, but wrong for ATC below
     data['items'][0]['additionalClassifications'][0]['id'] = u'sodium oxybate'
     additional_classification = {
         "scheme": u"ATC",
@@ -789,6 +812,18 @@ def create_tender(self):
         tender['items'][0]['additionalClassifications'],
         additional_classification
     )
+
+    # check special 33695000-8 code without additional classifications
+    data = deepcopy(self.initial_data)
+    data["items"] = [data["items"][0]]
+    del data['items'][0]['additionalClassifications']
+    data["items"][0]['classification']['id'] = u'33695000-8'
+
+    response = self.app.post_json('/tenders', {"data": data})
+    self.assertEqual(response.content_type, 'application/json')
+    self.assertEqual(response.status, '201 Created')
+    self.assertEqual(response.json['data']['items'][0]['classification']['id'], '33695000-8')
+    self.assertEqual(response.json['data']['items'][0]['classification']['scheme'], u'ДК021')
 
 
 def tender_funders(self):
