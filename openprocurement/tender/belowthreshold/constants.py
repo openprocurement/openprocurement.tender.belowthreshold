@@ -18,5 +18,4 @@ STATUS4ROLE = {
     'reviewers': ['pending'],
     'tender_owner': ['claim'],
     }
-
-MIN_NUMBER_OF_BIDS = 2
+MIN_BIDS_NUMBER = 2
