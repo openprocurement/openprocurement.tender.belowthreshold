@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
+
 import os
 from datetime import datetime, timedelta
 
 from openprocurement.api.constants import SANDBOX_MODE
 from openprocurement.api.utils import apply_data_patch
+from openprocurement.tender.belowthreshold.constants import MIN_NUMBER_OF_BIDS
 from openprocurement.tender.core.tests.base import (
     BaseTenderWebTest as BaseTWT
 )
@@ -139,16 +142,6 @@ test_bids = [
             "currency": "UAH",
             "valueAddedTaxIncluded": True
         }
-    },
-    {
-        "tenderers": [
-            test_organization
-        ],
-        "value": {
-            "amount": 479,
-            "currency": "UAH",
-            "valueAddedTaxIncluded": True
-        }
     }
 ]
 test_lots = [
@@ -195,6 +188,7 @@ test_features = [
 
 
 class BaseTenderWebTest(BaseTWT):
+    min_number_of_bids = MIN_NUMBER_OF_BIDS
     initial_data = test_tender_data
     initial_status = None
     initial_bids = None
