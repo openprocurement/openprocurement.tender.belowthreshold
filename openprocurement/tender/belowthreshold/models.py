@@ -21,7 +21,7 @@ from openprocurement.api.utils import (
 
 from openprocurement.api.constants import TZ
 from openprocurement.api.validation import (
-    validate_items_uniq, validate_cpv_group
+    validate_items_uniq, validate_cpv_group, validate_classification_id
 )
 
 from openprocurement.tender.core.models import ITender
@@ -269,6 +269,7 @@ class Tender(BaseTender):
                           valueAddedTaxIncluded=self.minimalStep.valueAddedTaxIncluded)) if self.lots else self.minimalStep
 
     def validate_items(self, data, items):
+        validate_classification_id(items)
         cpv_336_group = items[0].classification.id[:3] == '336' if items else False
         if not cpv_336_group and (data.get('revisions')[0].date if data.get('revisions') else get_now()) > CPV_ITEMS_CLASS_FROM and items and len(set([i.classification.id[:4] for i in items])) != 1:
             raise ValidationError(u"CPV class of items should be identical")
